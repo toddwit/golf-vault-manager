@@ -1,0 +1,1 @@
+"""Golf Vault Manager package."""
