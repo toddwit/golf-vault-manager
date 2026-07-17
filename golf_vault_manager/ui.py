@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from .config import DEFAULT_RATING, DEFAULT_TOPICS, MAX_RATING, MIN_RATING, VAULT_PATH
-from .resource_creator import create_markdown_resource
+from .resource_creator import create_resource
 from .validation import ValidationError, validate_form
 
 class GolfVaultManagerApp:
@@ -212,7 +212,7 @@ class GolfVaultManagerApp:
         self.status_var.set("Creating Markdown note...")
 
         try:
-            note_path = create_markdown_resource(resource)
+            note_path, url_path = create_resource(resource)
         except FileExistsError:
             self.status_var.set("Resource already exists")
             messagebox.showerror(
@@ -240,9 +240,9 @@ class GolfVaultManagerApp:
         messagebox.showinfo(
             "Resource Created",
             (
-                "The Markdown resource note was created successfully.\n\n"
-                f"{note_path}\n\n"
-                "The video and URL shortcut have not been created yet."
+                "The resource was created successfully.\n\n"
+                f"Markdown:\n{note_path}\n\n"
+                f"Shortcut:\n{url_path}"
             ),
         )
         

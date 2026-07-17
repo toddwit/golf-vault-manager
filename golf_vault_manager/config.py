@@ -1,6 +1,6 @@
 from pathlib import Path
 
-VAULT_PATH = Path(r"C:\00 Personal\Golf Vault")
+VAULT_PATH = Path(r"C:\.Personal\Golf Vault")
 
 DEFAULT_TOPICS = [
     "Grip",
