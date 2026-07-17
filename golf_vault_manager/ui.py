@@ -3,9 +3,17 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from .config import DEFAULT_RATING, DEFAULT_TOPICS, MAX_RATING, MIN_RATING, VAULT_PATH
+from .config import (
+    DEFAULT_RATING,
+    DEFAULT_TOPICS,
+    MAX_RATING,
+    MIN_RATING,
+    VAULT_PATH,
+)
+from .metadata_fetcher import MetadataError, fetch_video_metadata
 from .resource_creator import create_resource
 from .validation import ValidationError, validate_form
+
 
 class GolfVaultManagerApp:
     def __init__(self) -> None:
@@ -19,7 +27,9 @@ class GolfVaultManagerApp:
         self.title_var = tk.StringVar()
         self.rating_var = tk.IntVar(value=DEFAULT_RATING)
         self.status_var = tk.StringVar(value="Ready")
-        self.preview_var = tk.StringVar(value="Resource name preview will appear here.")
+        self.preview_var = tk.StringVar(
+            value="Resource name preview will appear here."
+        )
 
         self.topic_vars = {
             topic: tk.BooleanVar(value=False)
@@ -32,11 +42,22 @@ class GolfVaultManagerApp:
 
     def _configure_style(self) -> None:
         style = ttk.Style(self.root)
+
         if "vista" in style.theme_names():
             style.theme_use("vista")
-        style.configure("Heading.TLabel", font=("Segoe UI", 16, "bold"))
-        style.configure("Subheading.TLabel", font=("Segoe UI", 9))
-        style.configure("Preview.TLabel", font=("Segoe UI", 10, "bold"))
+
+        style.configure(
+            "Heading.TLabel",
+            font=("Segoe UI", 16, "bold"),
+        )
+        style.configure(
+            "Subheading.TLabel",
+            font=("Segoe UI", 9),
+        )
+        style.configure(
+            "Preview.TLabel",
+            font=("Segoe UI", 10, "bold"),
+        )
 
     def _build_window(self) -> None:
         outer = ttk.Frame(self.root, padding=20)
@@ -53,24 +74,65 @@ class GolfVaultManagerApp:
             outer,
             text=f"Obsidian vault: {VAULT_PATH}",
             style="Subheading.TLabel",
-        ).grid(row=1, column=0, sticky="w", pady=(2, 18))
+        ).grid(
+            row=1,
+            column=0,
+            sticky="w",
+            pady=(2, 18),
+        )
 
-        form = ttk.LabelFrame(outer, text="New Golf Resource", padding=16)
+        form = ttk.LabelFrame(
+            outer,
+            text="New Golf Resource",
+            padding=16,
+        )
         form.grid(row=2, column=0, sticky="nsew")
         form.columnconfigure(0, weight=1)
 
-        self._add_entry(
+        # Video URL
+        ttk.Label(
             form,
+            text="Video URL",
+        ).grid(
             row=0,
-            label="Video URL",
-            variable=self.url_var,
+            column=0,
+            sticky="w",
+            pady=(0, 6),
         )
+
+        url_frame = ttk.Frame(form)
+        url_frame.grid(row=1, column=0, sticky="ew")
+        url_frame.columnconfigure(0, weight=1)
+
+        self.url_entry = ttk.Entry(
+            url_frame,
+            textvariable=self.url_var,
+        )
+        self.url_entry.grid(
+            row=0,
+            column=0,
+            sticky="ew",
+        )
+
+        ttk.Button(
+            url_frame,
+            text="Fetch Metadata",
+            command=self._fetch_metadata,
+        ).grid(
+            row=0,
+            column=1,
+            padx=(8, 0),
+        )
+
+        # Instructor
         self._add_entry(
             form,
             row=2,
             label="Instructor / Source",
             variable=self.instructor_var,
         )
+
+        # Title
         self._add_entry(
             form,
             row=4,
@@ -78,30 +140,59 @@ class GolfVaultManagerApp:
             variable=self.title_var,
         )
 
-        ttk.Label(form, text="Topics").grid(
-            row=6, column=0, sticky="w", pady=(12, 6)
+        # Topics
+        ttk.Label(
+            form,
+            text="Topics",
+        ).grid(
+            row=6,
+            column=0,
+            sticky="w",
+            pady=(12, 6),
         )
 
         topics_frame = ttk.Frame(form)
-        topics_frame.grid(row=7, column=0, sticky="ew")
+        topics_frame.grid(
+            row=7,
+            column=0,
+            sticky="ew",
+        )
         topics_frame.columnconfigure(0, weight=1)
         topics_frame.columnconfigure(1, weight=1)
 
         for index, topic in enumerate(DEFAULT_TOPICS):
             row = index // 2
             column = index % 2
+
             ttk.Checkbutton(
                 topics_frame,
                 text=topic,
                 variable=self.topic_vars[topic],
-            ).grid(row=row, column=column, sticky="w", padx=(0, 24), pady=3)
+            ).grid(
+                row=row,
+                column=column,
+                sticky="w",
+                padx=(0, 24),
+                pady=3,
+            )
 
-        ttk.Label(form, text="Rating").grid(
-            row=8, column=0, sticky="w", pady=(16, 6)
+        # Rating
+        ttk.Label(
+            form,
+            text="Rating",
+        ).grid(
+            row=8,
+            column=0,
+            sticky="w",
+            pady=(16, 6),
         )
 
         rating_frame = ttk.Frame(form)
-        rating_frame.grid(row=9, column=0, sticky="w")
+        rating_frame.grid(
+            row=9,
+            column=0,
+            sticky="w",
+        )
 
         for rating in range(MIN_RATING, MAX_RATING + 1):
             ttk.Radiobutton(
@@ -109,14 +200,23 @@ class GolfVaultManagerApp:
                 text=str(rating),
                 variable=self.rating_var,
                 value=rating,
-            ).pack(side="left", padx=(0, 12))
+            ).pack(
+                side="left",
+                padx=(0, 12),
+            )
 
+        # Resource-name preview
         preview_frame = ttk.LabelFrame(
             outer,
             text="Resource Name Preview",
             padding=12,
         )
-        preview_frame.grid(row=3, column=0, sticky="ew", pady=(14, 0))
+        preview_frame.grid(
+            row=3,
+            column=0,
+            sticky="ew",
+            pady=(14, 0),
+        )
         preview_frame.columnconfigure(0, weight=1)
 
         ttk.Label(
@@ -124,35 +224,65 @@ class GolfVaultManagerApp:
             textvariable=self.preview_var,
             style="Preview.TLabel",
             wraplength=620,
-        ).grid(row=0, column=0, sticky="w")
+        ).grid(
+            row=0,
+            column=0,
+            sticky="w",
+        )
 
         ttk.Label(
             preview_frame,
-            text="Future .md, .mp4, .jpg, and .url files will all use this base name.",
+            text=(
+                "Future .md, .mp4, .jpg, and .url files "
+                "will all use this base name."
+            ),
             style="Subheading.TLabel",
             wraplength=620,
-        ).grid(row=1, column=0, sticky="w", pady=(5, 0))
+        ).grid(
+            row=1,
+            column=0,
+            sticky="w",
+            pady=(5, 0),
+        )
 
+        # Status and actions
         actions = ttk.Frame(outer)
-        actions.grid(row=4, column=0, sticky="ew", pady=(18, 0))
+        actions.grid(
+            row=4,
+            column=0,
+            sticky="ew",
+            pady=(18, 0),
+        )
         actions.columnconfigure(0, weight=1)
 
         ttk.Label(
             actions,
             textvariable=self.status_var,
-        ).grid(row=0, column=0, sticky="w")
+        ).grid(
+            row=0,
+            column=0,
+            sticky="w",
+        )
 
         ttk.Button(
             actions,
             text="Create Resource",
             command=self._create_resource,
-        ).grid(row=0, column=1, padx=(12, 0))
+        ).grid(
+            row=0,
+            column=1,
+            padx=(12, 0),
+        )
 
         ttk.Button(
             actions,
             text="Clear Form",
             command=self._clear_form,
-        ).grid(row=0, column=2, padx=(8, 0))
+        ).grid(
+            row=0,
+            column=2,
+            padx=(8, 0),
+        )
 
         self.url_entry.focus_set()
 
@@ -164,28 +294,48 @@ class GolfVaultManagerApp:
         label: str,
         variable: tk.StringVar,
     ) -> None:
-        ttk.Label(parent, text=label).grid(
-            row=row, column=0, sticky="w", pady=(0, 6)
+        ttk.Label(
+            parent,
+            text=label,
+        ).grid(
+            row=row,
+            column=0,
+            sticky="w",
+            pady=(12, 6),
         )
 
-        entry = ttk.Entry(parent, textvariable=variable)
-        entry.grid(row=row + 1, column=0, sticky="ew")
-
-        if variable is self.url_var:
-            self.url_entry = entry
+        entry = ttk.Entry(
+            parent,
+            textvariable=variable,
+        )
+        entry.grid(
+            row=row + 1,
+            column=0,
+            sticky="ew",
+        )
 
     def _bind_preview_updates(self) -> None:
-        self.instructor_var.trace_add("write", self._update_preview)
-        self.title_var.trace_add("write", self._update_preview)
+        self.instructor_var.trace_add(
+            "write",
+            self._update_preview,
+        )
+        self.title_var.trace_add(
+            "write",
+            self._update_preview,
+        )
 
     def _update_preview(self, *_args: object) -> None:
         instructor = self.instructor_var.get().strip()
         title = self.title_var.get().strip()
 
         if instructor and title:
-            self.preview_var.set(f"{instructor} - {title}")
+            self.preview_var.set(
+                f"{instructor} - {title}"
+            )
         else:
-            self.preview_var.set("Resource name preview will appear here.")
+            self.preview_var.set(
+                "Resource name preview will appear here."
+            )
 
     def _selected_topics(self) -> list[str]:
         return [
@@ -193,6 +343,54 @@ class GolfVaultManagerApp:
             for topic, variable in self.topic_vars.items()
             if variable.get()
         ]
+
+    def _fetch_metadata(self) -> None:
+        url = self.url_var.get().strip()
+
+        if not url:
+            self.status_var.set("URL is required")
+            messagebox.showerror(
+                "Video URL Required",
+                "Enter a video URL before fetching metadata.",
+            )
+            self.url_entry.focus_set()
+            return
+
+        if not url.startswith(("http://", "https://")):
+            self.status_var.set("Invalid URL")
+            messagebox.showerror(
+                "Invalid Video URL",
+                "The video URL must begin with http:// or https://.",
+            )
+            self.url_entry.focus_set()
+            return
+
+        self.status_var.set("Fetching metadata...")
+        self.root.update_idletasks()
+
+        try:
+            metadata = fetch_video_metadata(url)
+        except MetadataError as exc:
+            self.status_var.set("Metadata fetch failed")
+            messagebox.showerror(
+                "Could Not Fetch Metadata",
+                str(exc),
+            )
+            return
+        except Exception as exc:
+            self.status_var.set("Metadata fetch failed")
+            messagebox.showerror(
+                "Could Not Fetch Metadata",
+                (
+                    "An unexpected error occurred:\n\n"
+                    f"{exc}"
+                ),
+            )
+            return
+
+        self.instructor_var.set(metadata.instructor)
+        self.title_var.set(metadata.title)
+        self.status_var.set("Metadata loaded")
 
     def _create_resource(self) -> None:
         try:
@@ -205,11 +403,14 @@ class GolfVaultManagerApp:
             )
         except ValidationError as exc:
             self.status_var.set("Validation failed")
-            messagebox.showerror("Please Correct the Form", str(exc))
+            messagebox.showerror(
+                "Please Correct the Form",
+                str(exc),
+            )
             return
 
         self.preview_var.set(resource.base_name)
-        self.status_var.set("Creating Markdown note...")
+        self.status_var.set("Creating resource...")
 
         try:
             note_path, url_path = create_resource(resource)
@@ -218,8 +419,8 @@ class GolfVaultManagerApp:
             messagebox.showerror(
                 "Resource Already Exists",
                 (
-                    "A Markdown note already exists for this resource:\n\n"
-                    f"{resource.base_name}.md\n\n"
+                    "A resource already exists with this name:\n\n"
+                    f"{resource.base_name}\n\n"
                     "No existing file was changed."
                 ),
             )
@@ -229,13 +430,13 @@ class GolfVaultManagerApp:
             messagebox.showerror(
                 "Could Not Create Resource",
                 (
-                    "The Markdown note could not be created.\n\n"
+                    "The resource could not be created.\n\n"
                     f"{exc}"
                 ),
             )
             return
 
-        self.status_var.set("Markdown note created")
+        self.status_var.set("Resource created")
 
         messagebox.showinfo(
             "Resource Created",
@@ -245,7 +446,7 @@ class GolfVaultManagerApp:
                 f"Shortcut:\n{url_path}"
             ),
         )
-        
+
     def _clear_form(self) -> None:
         self.url_var.set("")
         self.instructor_var.set("")
@@ -256,7 +457,9 @@ class GolfVaultManagerApp:
             variable.set(False)
 
         self.status_var.set("Ready")
-        self.preview_var.set("Resource name preview will appear here.")
+        self.preview_var.set(
+            "Resource name preview will appear here."
+        )
         self.url_entry.focus_set()
 
     def run(self) -> None:
