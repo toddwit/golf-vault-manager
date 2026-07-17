@@ -4,8 +4,8 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from .config import DEFAULT_RATING, DEFAULT_TOPICS, MAX_RATING, MIN_RATING, VAULT_PATH
+from .resource_creator import create_markdown_resource
 from .validation import ValidationError, validate_form
-
 
 class GolfVaultManagerApp:
     def __init__(self) -> None:
@@ -209,20 +209,43 @@ class GolfVaultManagerApp:
             return
 
         self.preview_var.set(resource.base_name)
-        self.status_var.set("Form is valid")
+        self.status_var.set("Creating Markdown note...")
 
-        topic_text = ", ".join(resource.topics)
+        try:
+            note_path = create_markdown_resource(resource)
+        except FileExistsError:
+            self.status_var.set("Resource already exists")
+            messagebox.showerror(
+                "Resource Already Exists",
+                (
+                    "A Markdown note already exists for this resource:\n\n"
+                    f"{resource.base_name}.md\n\n"
+                    "No existing file was changed."
+                ),
+            )
+            return
+        except OSError as exc:
+            self.status_var.set("Could not create resource")
+            messagebox.showerror(
+                "Could Not Create Resource",
+                (
+                    "The Markdown note could not be created.\n\n"
+                    f"{exc}"
+                ),
+            )
+            return
+
+        self.status_var.set("Markdown note created")
+
         messagebox.showinfo(
-            "Create Resource",
+            "Resource Created",
             (
-                "The resource information is valid.\n\n"
-                f"Resource name:\n{resource.base_name}\n\n"
-                f"Topics: {topic_text}\n"
-                f"Rating: {resource.rating}\n\n"
-                "No files have been created and no video has been downloaded."
+                "The Markdown resource note was created successfully.\n\n"
+                f"{note_path}\n\n"
+                "The video and URL shortcut have not been created yet."
             ),
         )
-
+        
     def _clear_form(self) -> None:
         self.url_var.set("")
         self.instructor_var.set("")
