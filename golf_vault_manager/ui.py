@@ -144,8 +144,8 @@ class GolfVaultManagerApp:
 
         ttk.Button(
             actions,
-            text="Validate Resource",
-            command=self._validate_resource,
+            text="Create Resource",
+            command=self._create_resource,
         ).grid(row=0, column=1, padx=(12, 0))
 
         ttk.Button(
@@ -194,7 +194,7 @@ class GolfVaultManagerApp:
             if variable.get()
         ]
 
-    def _validate_resource(self) -> None:
+    def _create_resource(self) -> None:
         try:
             resource = validate_form(
                 url=self.url_var.get(),
@@ -213,9 +213,9 @@ class GolfVaultManagerApp:
 
         topic_text = ", ".join(resource.topics)
         messagebox.showinfo(
-            "Resource Validated",
+            "Create Resource",
             (
-                "The resource is ready for the next development step.\n\n"
+                "The resource information is valid.\n\n"
                 f"Resource name:\n{resource.base_name}\n\n"
                 f"Topics: {topic_text}\n"
                 f"Rating: {resource.rating}\n\n"
